@@ -1,0 +1,17 @@
+{
+  "name": "starling-diff",
+  "version": "1.0.0",
+  "description": "Create concise diffs for starling platform and aws-infrastructure releases",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^2.15.1",
+    "diff2html": "^2.3.3",
+    "nodegit": "^0.22.0",
+    "npm": "^6.0.0"
+  }
+}

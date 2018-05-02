@@ -20,7 +20,6 @@ function getGitTreeFromTag(repo, tagName, callback) {
             // 2 is GIT_OBJ_TREE
             reference.peel(2)
                 .then(tree => {
-                    console.log('base tree: ', tree.id())
                     callback(null, tree)
                 })
                 .catch(reason => {
@@ -35,14 +34,13 @@ function getGitTreeFromTag(repo, tagName, callback) {
 function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
     git.Diff.treeToTree(repo, baseCommit, headCommit)
         .then(diff => {
-            console.log(diff)
             callback(null, diff);
         })
         .catch(reason => {
-            console.log(reason)
             callback(reason, null)
         });
 }
+
 
 function main() {
     program.version('1.0.0')
@@ -75,7 +73,7 @@ function main() {
             getGitTreeFromTag(results.repo, program.head, callback);
         }],
         diff: ['repo', 'base', 'head', function (results, finalCallback) {
-            console.log(`base ${results.base} head ${results.head} repo ${results.repo}`);
+            // console.log(`base ${results.base} head ${results.head} repo ${results.repo}`);
             getGitDiffFromCommits(results.repo, results.base, results.head, finalCallback)
         }]
     }, function(err, results) {
@@ -83,26 +81,15 @@ function main() {
             console.log('error: ', err)
             return
         }
-        console.log('results:');
-        console.log(results);
-        console.log(results.diff.numDeltas())
-        console.log(results.diff.getDelta(0))
+        let diff = results.diff
 
-        results.diff.patches()
-            .then(patches => {
-                console.log(patches)
-                patches.forEach(p => {
-                    let diffFile = p.newFile();
-                    p.hunks().then(hunks => {
-                        console.log('file path: ', diffFile.path())
-                        console.log(hunks)
-                        hunks.forEach(h => {
-                            console.log(h.size())})
-                        })
-                })
-            })
-            .catch(reason => {
-                console.log(reason)
+        console.log('deltas: ', results.diff.numDeltas())
+
+        console.log(diff)
+
+        diff.toBuf(git.Diff.FORMAT.PATCH)
+            .then(buffer => {
+                console.log(buffer.toString())
             })
     });
 

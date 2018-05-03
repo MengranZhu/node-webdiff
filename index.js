@@ -42,6 +42,17 @@ function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
 }
 
 
+function gitDiffToString(diff, callback) {
+    diff.toBuf(git.Diff.FORMAT.PATCH)
+        .then(buffer => {
+            callback(null, buffer.toString())
+        })
+        .catch(reason => {
+            callback(reason, null)
+        })
+}
+
+
 function main() {
     program.version('1.0.0')
         .option('-p, --path [path]', 'Path to repository', '.')
@@ -57,8 +68,6 @@ function main() {
         process.exit(1);
     }
 
-    console.log('started starling-diff');
-
     async.auto({
         repo: function (callback) {
             git.Repository.open(path.resolve(program.path, '.git'))
@@ -73,28 +82,22 @@ function main() {
             getGitTreeFromTag(results.repo, program.head, callback);
         }],
         diff: ['repo', 'base', 'head', function (results, finalCallback) {
-            // console.log(`base ${results.base} head ${results.head} repo ${results.repo}`);
             getGitDiffFromCommits(results.repo, results.base, results.head, finalCallback)
         }]
     }, function(err, results) {
         if (err) {
             console.log('error: ', err)
-            return
+            process.exit(1)
         }
-        let diff = results.diff
 
-        console.log('deltas: ', results.diff.numDeltas())
+        gitDiffToString(results.diff, (err, str) => {
+            if (err) {
+                console.log(err)
+                process.exit(1)
+            }
+            console.log(str)
+        })
 
-        console.log(diff)
-
-        diff.toBuf(git.Diff.FORMAT.PATCH)
-            .then(buffer => {
-                console.log(buffer.toString())
-            })
     });
-
-
-    console.log('finished starling-diff');
-    // process.exit(0);
 }
 

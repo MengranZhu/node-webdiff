@@ -2,7 +2,6 @@
 const git = require('nodegit');
 const path = require('path');
 const async = require('async');
-const util = require('util');
 
 
 function getGitTreeFromTag(repo, tagName, callback) {
@@ -21,6 +20,7 @@ function getGitTreeFromTag(repo, tagName, callback) {
             callback(reason, null)
         });
 }
+
 
 function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
     git.Diff.treeToTree(repo, baseCommit, headCommit)

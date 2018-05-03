@@ -14,7 +14,7 @@ process.on('uncaughtException', function (error) {
 });
 
 
-function generateHtmlFromDiff(diffString){
+function generateHtmlFromDiff(diffString, title){
     let content = Diff2Html.getPrettyHtml(diffString, {
         inputFormat: 'diff',
         outputFormat: 'line-by-line',
@@ -30,6 +30,7 @@ function generateHtmlFromDiff(diffString){
     let jsUiContent = fs.readFileSync(jsUiFilePath, 'utf8');
 
     return template
+        .replace('<!--webdiff-title-->', title)
         .replace('<!--diff2html-css-->', '<style>\n' + cssContent + '\n</style>')
         .replace('<!--diff2html-js-ui-->', '<script>\n' + jsUiContent + '\n</script>')
         .replace('//diff2html-fileListCloseable', 'diff2htmlUi.fileListCloseable("#diff", true);')
@@ -37,11 +38,18 @@ function generateHtmlFromDiff(diffString){
         .replace('<!--diff2html-diff-->', content);
 }
 
+
+function filterDiff(gitDiff, includeRegex) {
+
+}
+
+
 function main() {
     program.version('1.0.0')
         .option('-p, --path [path]', 'Path to repository', '.')
         .option('-b, --base <oid>', 'Base tag')
         .option('-h, --head <oid>', 'Head tag')
+        .option('-t, --title [title]', 'Title to use for the output html page', 'Webdiff')
         .option('-c, --component',
             'Component of release. Must be a path to a directory. Other directories at the same '
             + 'level are filtered from the diff.')
@@ -57,6 +65,7 @@ function main() {
             console.log(err)
             return
         }
-        console.log(generateHtmlFromDiff(diff))
+
+        console.log(generateHtmlFromDiff(diff, program.title))
     });
 }

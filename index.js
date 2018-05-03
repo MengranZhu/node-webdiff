@@ -1,57 +1,15 @@
 #!/usr/bin/env node
 "use strict";
 
-const program = require('commander');
 // const diff2html = require("diff2html").Diff2Html;
-const git = require('nodegit');
-const path = require('path');
-const async = require('async');
-const util = require('util');
+const program = require('commander');
+const diff = require('./diff');
 
 main();
 
 process.on('uncaughtException', function (error) {
     console.log(error.stack);
 });
-
-function getGitTreeFromTag(repo, tagName, callback) {
-    git.Reference.lookup(repo, `refs/tags/${tagName}`)
-        .then(reference => {
-            // 2 is GIT_OBJ_TREE
-            reference.peel(2)
-                .then(tree => {
-                    callback(null, tree)
-                })
-                .catch(reason => {
-                    callback(`tree lookup failed: ${reason}`, null)
-                })
-        })
-        .catch(reason => {
-            callback(reason, null)
-        });
-}
-
-function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
-    git.Diff.treeToTree(repo, baseCommit, headCommit)
-        .then(diff => {
-            callback(null, diff);
-        })
-        .catch(reason => {
-            callback(reason, null)
-        });
-}
-
-
-function gitDiffToString(diff, callback) {
-    diff.toBuf(git.Diff.FORMAT.PATCH)
-        .then(buffer => {
-            callback(null, buffer.toString())
-        })
-        .catch(reason => {
-            callback(reason, null)
-        })
-}
-
 
 function main() {
     program.version('1.0.0')
@@ -68,36 +26,7 @@ function main() {
         process.exit(1);
     }
 
-    async.auto({
-        repo: function (callback) {
-            git.Repository.open(path.resolve(program.path, '.git'))
-                .then(repo => {
-                    callback(null, repo);
-                });
-        },
-        base: ['repo', function (results, callback) {
-            getGitTreeFromTag(results.repo, program.base, callback);
-        }],
-        head: ['repo', function (results, callback) {
-            getGitTreeFromTag(results.repo, program.head, callback);
-        }],
-        diff: ['repo', 'base', 'head', function (results, finalCallback) {
-            getGitDiffFromCommits(results.repo, results.base, results.head, finalCallback)
-        }]
-    }, function(err, results) {
-        if (err) {
-            console.log('error: ', err)
-            process.exit(1)
-        }
-
-        gitDiffToString(results.diff, (err, str) => {
-            if (err) {
-                console.log(err)
-                process.exit(1)
-            }
-            console.log(str)
-        })
-
-    });
+    diff(program.path, program.base, program.head, (err, diff) => {
+        console.log(diff)
+    })
 }
-

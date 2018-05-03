@@ -53,6 +53,9 @@ function main() {
         .option('-c, --component',
             'Component of release. Must be a path to a directory. Other directories at the same '
             + 'level are filtered from the diff.')
+        .option('-s, --pathspec [spec]',
+            'Git pathspec to filter the diff on. Should not be used in conjunction with '
+            + '--component, as that is essentially a helper to calculate a pathspec for you', null)
         .parse(process.argv);
 
     if (typeof program.base === 'undefined') {
@@ -60,7 +63,7 @@ function main() {
         process.exit(1);
     }
 
-    diff(program.path, program.base, program.head, (err, diff) => {
+    diff(program.path, program.base, program.head, program.pathspec, (err, diff) => {
         if (err) {
             console.log(err)
             return

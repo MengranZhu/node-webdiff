@@ -22,8 +22,13 @@ function getGitTreeFromTag(repo, tagName, callback) {
 }
 
 
-function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
-    git.Diff.treeToTree(repo, baseCommit, headCommit)
+function getGitDiffFromCommits(repo, baseCommit, headCommit, pathspec, callback) {
+    pathspec = pathspec || '*';
+
+    var diffOptions = new git.DiffOptions();
+    diffOptions.pathspec = pathspec;
+
+    git.Diff.treeToTree(repo, baseCommit, headCommit, diffOptions)
         .then(diff => {
             callback(null, diff);
         })
@@ -44,7 +49,7 @@ function gitDiffToString(diff, callback) {
 }
 
 
-module.exports = function(repoPath, baseCommit, headCommit, callback) {
+module.exports = function(repoPath, baseCommit, headCommit, pathspec, callback) {
     async.auto({
         repo: function (callback) {
             git.Repository.open(path.resolve(repoPath, '.git'))
@@ -59,7 +64,7 @@ module.exports = function(repoPath, baseCommit, headCommit, callback) {
             getGitTreeFromTag(results.repo, headCommit, callback);
         }],
         diff: ['repo', 'base', 'head', function (results, finalCallback) {
-            getGitDiffFromCommits(results.repo, results.base, results.head, finalCallback)
+            getGitDiffFromCommits(results.repo, results.base, results.head, pathspec, finalCallback)
         }]
     }, function(err, results) {
         if (err) {

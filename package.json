@@ -1,7 +1,7 @@
 {
-  "name": "starling-diff",
+  "name": "webdiff",
   "version": "1.0.0",
-  "description": "Create concise diffs for starling platform and aws-infrastructure releases",
+  "description": "Create concise, filtered HTML diffs from git repositories",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,7 +12,9 @@
     "async": "^2.6.0",
     "commander": "^2.15.1",
     "diff2html": "^2.3.3",
-    "nodegit": "^0.22.0",
-    "npm": "^6.0.0"
+    "nodegit": "^0.22.0"
+  },
+  "bin": {
+    "webdiff": "./cli.js"
   }
 }

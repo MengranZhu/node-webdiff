@@ -15,7 +15,6 @@ process.on('uncaughtException', function (error) {
 
 
 function generateHtmlFromDiff(diffString){
-    // console.log(diff)
     let content = Diff2Html.getPrettyHtml(diffString, {
         inputFormat: 'diff',
         outputFormat: 'line-by-line',
@@ -59,5 +58,5 @@ function main() {
             return
         }
         console.log(generateHtmlFromDiff(diff))
-    })
+    });
 }

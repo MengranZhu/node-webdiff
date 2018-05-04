@@ -23,11 +23,13 @@ function getGitTreeFromTag(repo, tagName, callback) {
 
 
 function getGitDiffFromCommits(repo, baseCommit, headCommit, pathspec, callback) {
-    pathspec = pathspec || '*';
+    /*
+        pathspec seems to work, unless it contains an exclude function, where it fails to match
+        anything
+    */
+    let diffOptions = new git.DiffOptions();
 
-    var diffOptions = new git.DiffOptions();
-    diffOptions.pathspec = pathspec;
-
+    diffOptions.pathspec = pathspec || '*';
     git.Diff.treeToTree(repo, baseCommit, headCommit, diffOptions)
         .then(diff => {
             callback(null, diff);
@@ -58,13 +60,22 @@ module.exports = function(repoPath, baseCommit, headCommit, pathspec, callback) 
                 });
         },
         base: ['repo', function (results, callback) {
-            getGitTreeFromTag(results.repo, baseCommit, callback);
+            getGitTreeFromTag(results.repo, baseCommit, callback)
+                .catch(reason => {
+                    callback(reason, null)
+                })
         }],
         head: ['repo', function (results, callback) {
-            getGitTreeFromTag(results.repo, headCommit, callback);
+            getGitTreeFromTag(results.repo, headCommit, callback)
+                .catch(reason => {
+                    callback(reason, null)
+                })
         }],
         diff: ['repo', 'base', 'head', function (results, finalCallback) {
             getGitDiffFromCommits(results.repo, results.base, results.head, pathspec, finalCallback)
+                .catch(reason => {
+                    finalCallback(reason, null)
+                })
         }]
     }, function(err, results) {
         if (err) {

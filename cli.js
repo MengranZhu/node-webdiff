@@ -6,6 +6,7 @@ const program = require('commander');
 const diff = require('./diff');
 const path = require('path');
 const fs = require('fs');
+const util = require('util');
 
 main();
 
@@ -49,13 +50,12 @@ function main() {
         .option('-p, --path [path]', 'Path to repository', '.')
         .option('-b, --base <oid>', 'Base tag')
         .option('-h, --head <oid>', 'Head tag')
-        .option('-t, --title [title]', 'Title to use for the output html page', 'Webdiff')
-        .option('-c, --component',
-            'Component of release. Must be a path to a directory. Other directories at the same '
-            + 'level are filtered from the diff.')
-        .option('-s, --pathspec [spec]',
-            'Git pathspec to filter the diff on. Should not be used in conjunction with '
-            + '--component, as that is essentially a helper to calculate a pathspec for you', null)
+        .option('-t, --title [title]', 'Title to use for the output html page', null)
+        .option('-c, --component <path>',
+            'Component of release. Must be a relative path to a directory within the repository'
+            + 'from its root. Other directories at the same level are filtered from the diff.')
+        .option('-s, --pathspec <spec>',
+            'Git pathspec to filter the diff on. An alternative to --component')
         .parse(process.argv);
 
     if (typeof program.base === 'undefined') {
@@ -63,12 +63,56 @@ function main() {
         process.exit(1);
     }
 
-    diff(program.path, program.base, program.head, program.pathspec, (err, diff) => {
-        if (err) {
-            console.log(err)
-            return
-        }
+    if (program.pathspec && program.component) {
+        console.log('pathspec and component can not both be specified')
+        process.exit(1);
+    }
 
-        console.log(generateHtmlFromDiff(diff, program.title))
-    });
+    if (!program.title) {
+        var title = `Diff of ${program.component || program.spec || program.repo} from ${program.base} to ${program.head}`
+    } else {
+        var title = program.title
+    }
+
+    if (program.pathspec) {
+        // User has specified pathspec, so JFDI
+        diff(program.path, program.base, program.head, program.pathspec, (err, diff) => {
+            if (err) {
+                console.log(err)
+                return
+            }
+
+            console.log(generateHtmlFromDiff(diff, title))
+        });
+
+    } else if (program.component) {
+        // Build two pathspecs from component; one for the component (specInclusive), one for the
+        // rest which excludes all components (specExclusive)
+
+        let p = path.parse(program.component)
+        let specInclusive = program.component
+        let specExclusive = util.format(":(exclude)%s", p.dir)
+
+        diff(program.path, program.base, program.head, specInclusive, (err, diff) => {
+            if (err) {
+                console.log(err)
+                return
+            }
+
+            console.log(generateHtmlFromDiff(diff, "component diff"))
+        });
+        diff(program.path, program.base, program.head, specExclusive, (err, diff) => {
+            if (err) {
+                console.log(err)
+                return
+            }
+
+            console.log(generateHtmlFromDiff(diff, "non-component diff"))
+        });
+
+
+    } else {
+        console.log('errr')
+    }
+
 }

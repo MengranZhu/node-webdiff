@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
+const async = require('async');
 const diff2html = require("diff2html").Diff2Html;
 const program = require('commander');
 const diff = require('./diff');
@@ -92,24 +93,31 @@ function main() {
         let p = path.parse(program.component)
         let specInclusive = program.component
         let specExclusive = util.format(":(exclude)%s", p.dir)
-
-        diff(program.path, program.base, program.head, specInclusive, (err, diff) => {
+        async.auto({
+            diffOne: function (callback) {
+                diff(program.path, program.base, program.head, specInclusive, (err, diff) => {
+                    if (err) {
+                        callback(err, null)
+                    }
+                    callback(null, diff)
+                });
+            },
+            diffTwo: function (callback) {
+                diff(program.path, program.base, program.head, specExclusive, (err, diff) => {
+                    if (err) {
+                        callback(err, null)
+                    }
+                    callback(null, diff)
+                });
+            }
+        }, function(err, results) {
             if (err) {
-                console.log(err)
-                return
+                console.log('error: ', err)
+                process.exit(1)
             }
 
-            console.log(generateHtmlFromDiff(diff, "component diff"))
+            console.log(generateHtmlFromDiff(results.diffOne + results.diffTwo, `${p.name} from ${program.base} to ${program.head}`))
         });
-        diff(program.path, program.base, program.head, specExclusive, (err, diff) => {
-            if (err) {
-                console.log(err)
-                return
-            }
-
-            console.log(generateHtmlFromDiff(diff, "non-component diff"))
-        });
-
 
     } else {
         console.log('errr')

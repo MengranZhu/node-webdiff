@@ -22,10 +22,15 @@ function getGitTreeFromTag(repo, tagName, callback) {
 }
 
 
-function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
-    // let diffOptions = new git.DiffOptions();
+function getGitDiffFromCommits(repo, baseCommit, headCommit, pathspec, callback) {
+    /*
+        pathspec seems to work, unless it contains an exclude function, where it fails to match
+        anything
+    */
+    let diffOptions = new git.DiffOptions();
 
-    git.Diff.treeToTree(repo, baseCommit, headCommit)
+    diffOptions.pathspec = pathspec || '*';
+    git.Diff.treeToTree(repo, baseCommit, headCommit, diffOptions)
         .then(diff => {
             callback(null, diff);
         })
@@ -35,8 +40,18 @@ function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
 }
 
 
+function gitDiffToString(diff, callback) {
+    diff.toBuf(git.Diff.FORMAT.PATCH)
+        .then(buffer => {
+            callback(null, buffer.toString())
+        })
+        .catch(reason => {
+            callback(reason, null)
+        })
+}
 
-module.exports = function(repoPath, baseCommit, headCommit, componentPath, callback) {
+
+module.exports = function(repoPath, baseCommit, headCommit, pathspec, callback) {
     async.auto({
         repo: function (callback) {
             git.Repository.open(path.resolve(repoPath, '.git'))
@@ -57,7 +72,7 @@ module.exports = function(repoPath, baseCommit, headCommit, componentPath, callb
                 })
         }],
         diff: ['repo', 'base', 'head', function (results, finalCallback) {
-            getGitDiffFromCommits(results.repo, results.base, results.head, finalCallback)
+            getGitDiffFromCommits(results.repo, results.base, results.head, pathspec, finalCallback)
                 .catch(reason => {
                     finalCallback(reason, null)
                 })
@@ -68,7 +83,9 @@ module.exports = function(repoPath, baseCommit, headCommit, componentPath, callb
             process.exit(1)
         }
 
-        callback(err, results.diff)
+        gitDiffToString(results.diff, (err, stringDiff) => {
+            callback(err, stringDiff)
+        })
     });
 }
 

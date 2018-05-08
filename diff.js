@@ -22,15 +22,10 @@ function getGitTreeFromTag(repo, tagName, callback) {
 }
 
 
-function getGitDiffFromCommits(repo, baseCommit, headCommit, pathspec, callback) {
-    /*
-        pathspec seems to work, unless it contains an exclude function, where it fails to match
-        anything
-    */
-    let diffOptions = new git.DiffOptions();
+function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
+    // let diffOptions = new git.DiffOptions();
 
-    diffOptions.pathspec = pathspec || '*';
-    git.Diff.treeToTree(repo, baseCommit, headCommit, diffOptions)
+    git.Diff.treeToTree(repo, baseCommit, headCommit)
         .then(diff => {
             callback(null, diff);
         })
@@ -51,11 +46,34 @@ function gitDiffToString(diff, callback) {
 }
 
 
-module.exports = function(repoPath, baseCommit, headCommit, pathspec, callback) {
+function generateIgnoreRules(componentPath) {
+    /*
+        Take the component path and generate ignore rules...
+
+        This is a giant hack because excludes don't seem to work in pathspecs given to DiffOptions
+     */
+
+    let p = path.parse(componentPath)
+    let rules = `!${p.dir}/*\n${p.dir}/${p.name}\n`
+
+    return rules
+}
+
+
+module.exports = function(repoPath, baseCommit, headCommit, componentPath, callback) {
     async.auto({
         repo: function (callback) {
             git.Repository.open(path.resolve(repoPath, '.git'))
                 .then(repo => {
+                    var r = generateIgnoreRules(componentPath)
+                    console.log('ignore rules: ', r)
+                    try {
+                        git.Ignore.addRule(repo, r)
+
+                    } catch (e) {
+                        console.log(e)
+
+                    }
                     callback(null, repo);
                 });
         },
@@ -72,7 +90,7 @@ module.exports = function(repoPath, baseCommit, headCommit, pathspec, callback) 
                 })
         }],
         diff: ['repo', 'base', 'head', function (results, finalCallback) {
-            getGitDiffFromCommits(results.repo, results.base, results.head, pathspec, finalCallback)
+            getGitDiffFromCommits(results.repo, results.base, results.head, finalCallback)
                 .catch(reason => {
                     finalCallback(reason, null)
                 })

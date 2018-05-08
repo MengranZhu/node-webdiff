@@ -9,7 +9,12 @@ const path = require('path');
 const fs = require('fs');
 const util = require('util');
 
-main();
+try {
+    main();
+} catch (e) {
+    console.log(e);
+    process.exit(1);
+}
 
 process.on('uncaughtException', function (error) {
     console.log(error.stack);
@@ -69,14 +74,22 @@ function main() {
         process.exit(1);
     }
 
-    if (!program.title) {
-        var title = `Diff of ${program.component || program.spec || program.repo} from ${program.base} to ${program.head}`
-    } else {
-        var title = program.title
-    }
+    let p = path.parse(program.component)
+    // let ps = [
+    //     "components/*",
+    //     "(exclude)components/banking",
+    //     // util.format("!components/%s", p.dir),
+    // ]
+    // program.pathspec = ps;
+
 
     if (program.pathspec) {
         // User has specified pathspec, so JFDI
+        var title = program.title ||
+                    `Diff of ${program.component || program.spec || program.repo} 
+                    from ${program.base} 
+                    to ${program.head}`
+
         diff(program.path, program.base, program.head, program.pathspec, (err, diff) => {
             if (err) {
                 console.log(err)
@@ -90,33 +103,11 @@ function main() {
         // Build two pathspecs from component; one for the component (specInclusive), one for the
         // rest which excludes all components (specExclusive)
 
-        let p = path.parse(program.component)
-        let specInclusive = program.component
-        let specExclusive = util.format(":(exclude)%s", p.dir)
-        async.auto({
-            diffOne: function (callback) {
-                diff(program.path, program.base, program.head, specInclusive, (err, diff) => {
-                    if (err) {
-                        callback(err, null)
-                    }
-                    callback(null, diff)
-                });
-            },
-            diffTwo: function (callback) {
-                diff(program.path, program.base, program.head, specExclusive, (err, diff) => {
-                    if (err) {
-                        callback(err, null)
-                    }
-                    callback(null, diff)
-                });
-            }
-        }, function(err, results) {
+        diff(program.path, program.base, program.head, program.component, (err, diff) => {
             if (err) {
-                console.log('error: ', err)
-                process.exit(1)
+                console.log(err)
             }
-
-            console.log(generateHtmlFromDiff(results.diffOne + results.diffTwo, `${p.name} from ${program.base} to ${program.head}`))
+            console.log(generateHtmlFromDiff(diff, `${p.name} from ${program.base} to ${program.head}`))
         });
 
     } else {

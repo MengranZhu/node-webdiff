@@ -46,8 +46,52 @@ function generateHtmlFromDiff(diffString, title){
 }
 
 
-function filterDiff(gitDiff, includeRegex) {
+function filterDiff(gitDiff, component, callback) {
+    // Remove other components from the diff
+    let filteredPatches = []
 
+    gitDiff.patches()
+        .then(patches => {
+            // Array of ConvenientPatches
+            // console.log(patches)
+            patches.forEach(patch => {
+                // ConvenientPatch
+                // console.log(patch)
+                filteredPatches.push(patch.newFile().path() + " " + patch.oldFile().path())
+                patch.hunks().then(hunks => {
+                    hunks.forEach(hunk => {
+                        hunk.lines().then(lines => {
+                            filteredPatches.push("diff " + patch.oldFile().path(), patch.newFile().path())
+                            filteredPatches.push(hunk.header().trim());
+                            lines.forEach(line => {
+                                filteredPatches.push(
+                                    String.fromCharCode(line.origin()) + line.content().trim()
+                                )
+                            })
+                        })
+                    })
+                })
+            })
+        })
+        .done(diffList => {
+            console.log(filteredPatches)
+            callback(null, filteredPatches)
+        })
+
+}
+
+
+function gitDiffToString(diff, callback) {
+    callback(
+        null, diff.join('\n')
+    )
+    // diff.toBuf(git.Diff.FORMAT.PATCH)
+    //     .then(buffer => {
+    //         callback(null, buffer.toString())
+    //     })
+    //     .catch(reason => {
+    //         callback(reason, null)
+    //     })
 }
 
 
@@ -82,36 +126,19 @@ function main() {
     // ]
     // program.pathspec = ps;
 
+    var title = program.title ||
+        `Diff of "${p.name || program.spec || program.repo}" ` +
+        `from ${program.base} ` +
+        `to ${program.head}`
+    console.log(title)
 
-    if (program.pathspec) {
-        // User has specified pathspec, so JFDI
-        var title = program.title ||
-                    `Diff of ${program.component || program.spec || program.repo} 
-                    from ${program.base} 
-                    to ${program.head}`
-
-        diff(program.path, program.base, program.head, program.pathspec, (err, diff) => {
-            if (err) {
-                console.log(err)
-                return
-            }
-
-            console.log(generateHtmlFromDiff(diff, title))
-        });
-
-    } else if (program.component) {
-        // Build two pathspecs from component; one for the component (specInclusive), one for the
-        // rest which excludes all components (specExclusive)
-
-        diff(program.path, program.base, program.head, program.component, (err, diff) => {
-            if (err) {
-                console.log(err)
-            }
-            console.log(generateHtmlFromDiff(diff, `${p.name} from ${program.base} to ${program.head}`))
-        });
-
-    } else {
-        console.log('errr')
-    }
-
+    diff(program.path, program.base, program.head, program.component, (err, diff) => {
+        filterDiff(
+            diff, program.component, filteredDiff => {
+                gitDiffToString(filteredDiff, (err, stringDiff) => {
+                    callback(err, stringDiff)
+                    console.log(generateHtmlFromDiff(stringDiff, title))
+                })
+            })
+    })
 }

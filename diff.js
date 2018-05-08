@@ -35,45 +35,12 @@ function getGitDiffFromCommits(repo, baseCommit, headCommit, callback) {
 }
 
 
-function gitDiffToString(diff, callback) {
-    diff.toBuf(git.Diff.FORMAT.PATCH)
-        .then(buffer => {
-            callback(null, buffer.toString())
-        })
-        .catch(reason => {
-            callback(reason, null)
-        })
-}
-
-
-function generateIgnoreRules(componentPath) {
-    /*
-        Take the component path and generate ignore rules...
-
-        This is a giant hack because excludes don't seem to work in pathspecs given to DiffOptions
-     */
-
-    let p = path.parse(componentPath)
-    let rules = `!${p.dir}/*\n${p.dir}/${p.name}\n`
-
-    return rules
-}
-
 
 module.exports = function(repoPath, baseCommit, headCommit, componentPath, callback) {
     async.auto({
         repo: function (callback) {
             git.Repository.open(path.resolve(repoPath, '.git'))
                 .then(repo => {
-                    var r = generateIgnoreRules(componentPath)
-                    console.log('ignore rules: ', r)
-                    try {
-                        git.Ignore.addRule(repo, r)
-
-                    } catch (e) {
-                        console.log(e)
-
-                    }
                     callback(null, repo);
                 });
         },
@@ -101,9 +68,7 @@ module.exports = function(repoPath, baseCommit, headCommit, componentPath, callb
             process.exit(1)
         }
 
-        gitDiffToString(results.diff, (err, stringDiff) => {
-            callback(err, stringDiff)
-        })
+        callback(err, results.diff)
     });
 }
 

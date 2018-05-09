@@ -10,6 +10,8 @@ const fs = require('fs');
 const util = require('util');
 const git = require('nodegit');
 
+// Always ignore these paths in any repository
+// Git pathspecs are valid here
 const excludePaths = [
     'README.md',
     '.git',
@@ -55,6 +57,7 @@ function generateHtmlFromDiff(diffString, title){
         .replace('<!--diff2html-diff-->', content);
 }
 
+
 function listPathsForDiff(repoPath, componentPath) {
     /*
         List the paths that we need to include in our diff
@@ -72,22 +75,24 @@ function listPathsForDiff(repoPath, componentPath) {
     gitignore.forEach(entry => {
         ignorePathspecs.push(git.Pathspec.create(entry))
     })
+    excludePaths.forEach(entry => {
+        ignorePathspecs.push(git.Pathspec.create(entry))
+    })
 
-    for (var i = 0; i < files.length; i++) {
+    for (let i = 0; i < files.length; i++) {
         let file = files[i]
+
         let inGitignore = 0
         ignorePathspecs.forEach(ps => {
             if (ps.matchesPath(0, file)) {
                 inGitignore = 1
             }
         })
+
         if (inGitignore === 1) {
             continue
         }
         if (file === cp.dir) {
-            continue
-        }
-        if (excludePaths.indexOf(file) >= 0) {
             continue
         }
 
@@ -95,6 +100,7 @@ function listPathsForDiff(repoPath, componentPath) {
     }
     return paths
 }
+
 
 function generateDiffForPaths(repoPath, baseCommit, headCommit, pathArray, callback) {
     async.concat(
@@ -116,7 +122,6 @@ function generateDiffForPaths(repoPath, baseCommit, headCommit, pathArray, callb
         }
     )
 }
-
 
 
 function main() {
@@ -149,7 +154,7 @@ function main() {
     }
 
     let diffPaths = listPathsForDiff(program.path, program.component)
-    console.log('Paths:', diffPaths)
+    // console.log('Paths:', diffPaths)
 
     generateDiffForPaths(program.path, program.base, program.head, diffPaths, (err, diffString) => {
         // console.log(diffString)

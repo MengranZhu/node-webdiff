@@ -8,8 +8,23 @@ const diff = require('./diff');
 const path = require('path');
 const fs = require('fs');
 const util = require('util');
+const git = require('nodegit');
 
-main();
+const excludePaths = [
+    'README.md',
+    '.git',
+    '.github',
+    '.gitignore',
+    '.idea',
+]
+
+try {
+    main();
+
+} catch (e) {
+    console.log(e)
+    process.exit(1)
+}
 
 process.on('uncaughtException', function (error) {
     console.log(error.stack);
@@ -40,10 +55,68 @@ function generateHtmlFromDiff(diffString, title){
         .replace('<!--diff2html-diff-->', content);
 }
 
+function listPathsForDiff(repoPath, componentPath) {
+    /*
+        List the paths that we need to include in our diff
 
-function filterDiff(gitDiff, includeRegex) {
+        DOES NOT WORK RECURSIVELY; I.E. the component must be no more than 1-level from root
+     */
 
+    let paths = [componentPath]
+    let cp = path.parse(componentPath)
+
+    let gitignore = fs.readFileSync(repoPath + "/.gitignore").toString().trim().split("\n")
+    let files = fs.readdirSync(repoPath)
+
+    let ignorePathspecs = []
+    gitignore.forEach(entry => {
+        ignorePathspecs.push(git.Pathspec.create(entry))
+    })
+
+    for (var i = 0; i < files.length; i++) {
+        let file = files[i]
+        let inGitignore = 0
+        ignorePathspecs.forEach(ps => {
+            if (ps.matchesPath(0, file)) {
+                inGitignore = 1
+            }
+        })
+        if (inGitignore === 1) {
+            continue
+        }
+        if (file === cp.dir) {
+            continue
+        }
+        if (excludePaths.indexOf(file) >= 0) {
+            continue
+        }
+
+        paths.push(file)
+    }
+    return paths
 }
+
+function generateDiffForPath(repoPath, baseCommit, headCommit, pathspec, callback) {
+    async.series(
+        [
+            function(callback) {
+                diff(repoPath, baseCommit, headCommit, pathspec, (err, _diff) => {
+                    if (err) {
+                        return callback(err, null)
+                    }
+                    return callback(null, _diff)
+                });
+            }
+        ],
+        function(err, results) {
+            if (err) {
+                return callback(err, null)
+            }
+            return callback(null, results[0])
+        }
+    );
+}
+
 
 
 function main() {
@@ -70,57 +143,32 @@ function main() {
     }
 
     if (!program.title) {
-        var title = `Diff of ${program.component || program.spec || program.repo} from ${program.base} to ${program.head}`
+        var title = `Diff of ${program.component || program.spec || program.path} from ${program.base} to ${program.head}`
     } else {
         var title = program.title
     }
 
-    if (program.pathspec) {
-        // User has specified pathspec, so JFDI
-        diff(program.path, program.base, program.head, program.pathspec, (err, diff) => {
-            if (err) {
-                console.log(err)
-                return
-            }
+    let diffPaths = listPathsForDiff(program.path, program.component)
+    console.log('Paths:', diffPaths)
 
-            console.log(generateHtmlFromDiff(diff, title))
-        });
-
-    } else if (program.component) {
-        // Build two pathspecs from component; one for the component (specInclusive), one for the
-        // rest which excludes all components (specExclusive)
-
-        let p = path.parse(program.component)
-        let specInclusive = program.component
-        let specExclusive = util.format(":(exclude)%s", p.dir)
-        async.auto({
-            diffOne: function (callback) {
-                diff(program.path, program.base, program.head, specInclusive, (err, diff) => {
+    let diffString = ''
+    diffPaths.forEach(path => {
+        generateDiffForPath(program.path, program.base, program.head, path, d => {
+            async.series(
+                [
+                    callback => {callback(null, diffString.concat(d))}
+                ],
+                (err, results) => {
                     if (err) {
-                        callback(err, null)
+                        return callback(err, null)
                     }
-                    callback(null, diff)
-                });
-            },
-            diffTwo: function (callback) {
-                diff(program.path, program.base, program.head, specExclusive, (err, diff) => {
-                    if (err) {
-                        callback(err, null)
-                    }
-                    callback(null, diff)
-                });
-            }
-        }, function(err, results) {
-            if (err) {
-                console.log('error: ', err)
-                process.exit(1)
-            }
-
-            console.log(generateHtmlFromDiff(results.diffOne + results.diffTwo, `${p.name} from ${program.base} to ${program.head}`))
-        });
-
-    } else {
-        console.log('errr')
-    }
+                    diffString.concat(results[0])
+                    console.log(diffString)
+                    return callback(null, results)
+                }
+            )
+        })
+    })
+    // console.log(generateHtmlFromDiff(diffString, title))
 
 }

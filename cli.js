@@ -133,8 +133,6 @@ function main() {
         .option('-c, --component <path>',
             'Component of release. Must be a relative path to a directory within the repository'
             + 'from its root. Other directories at the same level are filtered from the diff.')
-        .option('-s, --pathspec <spec>',
-            'Git pathspec to filter the diff on. An alternative to --component')
         .parse(process.argv);
 
     if (typeof program.base === 'undefined') {
@@ -147,12 +145,15 @@ function main() {
         process.exit(1);
     }
 
-    if (!program.title) {
-        var title = `Diff of ${program.component || program.spec || program.path} from ${program.base} to ${program.head}`
-    } else {
-        var title = program.title
-    }
+    let title = program.title ||
+                `Diff of ${program.component || program.spec || program.path} ` +
+                `from ${program.base} ` +
+                `to ${program.head}`
 
+    /*
+        Because libgit's pathspec support is limited (does not support exclusions), we chain together
+        diffs from a list of paths, rather than generate a single diff from a pathspec
+     */
     let diffPaths = listPathsForDiff(program.path, program.component)
     // console.log('Paths:', diffPaths)
 
@@ -160,5 +161,4 @@ function main() {
         // console.log(diffString)
         console.log(generateHtmlFromDiff(diffString, title))
     })
-
 }

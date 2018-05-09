@@ -145,14 +145,15 @@ function main() {
         process.exit(1);
     }
 
+    let name = path.parse(program.component).name
     let title = program.title ||
-                `Diff of ${program.component || program.spec || program.path} ` +
-                `from ${program.base} ` +
-                `to ${program.head}`
+        `Diff of ${name || program.component || program.path} ` +
+        `from ${program.base} ` +
+        `to ${program.head}`
 
     /*
-        Because libgit's pathspec support is limited (does not support exclusions), we chain together
-        diffs from a list of paths, rather than generate a single diff from a pathspec
+        Because libgit's pathspec support is limited (does not support exclusions), we chain
+        together diffs from a list of paths, rather than generate a single diff from a pathspec.
      */
     let diffPaths = listPathsForDiff(program.path, program.component)
     // console.log('Paths:', diffPaths)

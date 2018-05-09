@@ -147,8 +147,8 @@ function main() {
 
     let name = path.parse(program.component).name
     let title = program.title ||
-        `Diff of ${name || program.component || program.path} ` +
-        `from ${program.base} ` +
+        `Diff of "${name || program.component || program.path}"<br />` +
+        `from ${program.base}<br />` +
         `to ${program.head}`
 
     /*

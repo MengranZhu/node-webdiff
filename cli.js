@@ -131,8 +131,9 @@ function main() {
         .option('-h, --head <oid>', 'Head tag')
         .option('-t, --title [title]', 'Title to use for the output html page', null)
         .option('-c, --component <path>',
-            'Component of release. Must be a relative path to a directory within the repository'
-            + 'from its root. Other directories at the same level are filtered from the diff.')
+            'Optional component to diff. Must be a relative path to a directory within the '
+            + 'repository from its root. Other directories at the same level are filtered from the '
+            + 'diff. Whole repository is diff\'d if not specified.', null)
         .parse(process.argv);
 
     if (typeof program.base === 'undefined') {
@@ -140,14 +141,16 @@ function main() {
         process.exit(1);
     }
 
-    if (program.pathspec && program.component) {
-        console.log('pathspec and component can not both be specified')
-        process.exit(1);
+    if (program.component) {
+        var name = path.parse(program.component).name
+        var diffPaths = listPathsForDiff(program.path, program.component)
+        // console.log('Paths:', diffPaths)
+    } else {
+        var name = path.parse(program.path).name
+        var diffPaths = ["*"]
     }
-
-    let name = path.parse(program.component).name
     let title = program.title ||
-        `Diff of "${name || program.component || program.path}"<br />` +
+        `Diff of "${name}"<br />` +
         `from ${program.base}<br />` +
         `to ${program.head}`
 
@@ -155,8 +158,6 @@ function main() {
         Because libgit's pathspec support is limited (does not support exclusions), we chain
         together diffs from a list of paths, rather than generate a single diff from a pathspec.
      */
-    let diffPaths = listPathsForDiff(program.path, program.component)
-    // console.log('Paths:', diffPaths)
 
     generateDiffForPaths(program.path, program.base, program.head, diffPaths, (err, diffString) => {
         // console.log(diffString)

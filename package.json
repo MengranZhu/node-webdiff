@@ -2,11 +2,12 @@
   "name": "webdiff",
   "version": "1.0.0",
   "description": "Create concise, filtered HTML diffs from git repositories",
-  "main": "index.js",
+  "private": true,
+  "main": "cli.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Alex Forbes",
   "license": "ISC",
   "dependencies": {
     "async": "^2.6.0",

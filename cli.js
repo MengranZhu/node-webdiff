@@ -96,25 +96,25 @@ function listPathsForDiff(repoPath, componentPath) {
     return paths
 }
 
-function generateDiffForPath(repoPath, baseCommit, headCommit, pathspec, callback) {
-    async.series(
-        [
-            function(callback) {
-                diff(repoPath, baseCommit, headCommit, pathspec, (err, _diff) => {
-                    if (err) {
-                        return callback(err, null)
-                    }
-                    return callback(null, _diff)
-                });
-            }
-        ],
-        function(err, results) {
+function generateDiffForPaths(repoPath, baseCommit, headCommit, pathArray, callback) {
+    async.concat(
+        pathArray,
+        (p, _callback) => {
+            diff(repoPath, baseCommit, headCommit, p, (err, _diff) => {
+                if (err) {
+                    return _callback(err, null)
+                }
+                return _callback(null, _diff)
+            })
+        },
+        (err, concatDiff) => {
             if (err) {
                 return callback(err, null)
             }
-            return callback(null, results[0])
+            concatDiff = concatDiff.filter(s => {return s !== '' })
+            return callback(null, concatDiff.join(''))
         }
-    );
+    )
 }
 
 
@@ -151,24 +151,9 @@ function main() {
     let diffPaths = listPathsForDiff(program.path, program.component)
     console.log('Paths:', diffPaths)
 
-    let diffString = ''
-    diffPaths.forEach(path => {
-        generateDiffForPath(program.path, program.base, program.head, path, d => {
-            async.series(
-                [
-                    callback => {callback(null, diffString.concat(d))}
-                ],
-                (err, results) => {
-                    if (err) {
-                        return callback(err, null)
-                    }
-                    diffString.concat(results[0])
-                    console.log(diffString)
-                    return callback(null, results)
-                }
-            )
-        })
+    generateDiffForPaths(program.path, program.base, program.head, diffPaths, (err, diffString) => {
+        // console.log(diffString)
+        console.log(generateHtmlFromDiff(diffString, title))
     })
-    // console.log(generateHtmlFromDiff(diffString, title))
 
 }

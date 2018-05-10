@@ -68,7 +68,11 @@ function listPathsForDiff(repoPath, componentPath) {
     let paths = [componentPath]
     let cp = path.parse(componentPath)
 
-    let gitignore = fs.readFileSync(repoPath + "/.gitignore").toString().trim().split("\n")
+    let gitignore = []
+    if (fs.existsSync(repoPath + "/.gitignore")) {
+        gitignore = fs.readFileSync(repoPath + "/.gitignore").toString().trim().split("\n")
+    }
+
     let files = fs.readdirSync(repoPath)
 
     let ignorePathspecs = []

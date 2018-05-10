@@ -11,5 +11,6 @@ COPY --from=builder /src/node_modules /src/node_modules
 ADD . .
 RUN npm link
 
+WORKDIR /data
 ENTRYPOINT ["webdiff"]
 CMD ["--help"]

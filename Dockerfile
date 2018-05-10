@@ -3,7 +3,10 @@
 FROM library/node:9-stretch as base
 # remove unneeded packages
 RUN DEBIAN_FRONTEND=noninteractive \
-    apt-get -y remove mercurial && \
+    apt-get -y remove \
+        mercurial \
+        cups \
+     && \
     apt-get -y autoremove
 RUN DEBIAN_FRONTEND=noninteractive \
     apt-get -y update && \

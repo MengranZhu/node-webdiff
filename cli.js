@@ -124,16 +124,18 @@ function generateDiffForPaths(repoPath, baseCommit, headCommit, pathArray, callb
 }
 
 
-function listTags(repoPath, callback, prefix='RELEASE-2.') {
+function listTags(repoPath, callback, prefix=null) {
     git.Repository.open(path.resolve(repoPath, '.git')).then(
         repo => {
             return git.Tag.list(repo)
         })
         .then(tagList => {
-            let filteredTags = tagList.filter(t => {
-                return t.startsWith(prefix)
-            })
-            return callback(null, filteredTags.sort())
+            if (prefix) {
+                tagList = tagList.filter(t => {
+                    return t.startsWith(prefix)
+                })
+            }
+            return callback(null, tagList.sort())
         })
         .catch(reason => {
             return callback(reason, null)
@@ -141,20 +143,24 @@ function listTags(repoPath, callback, prefix='RELEASE-2.') {
 }
 
 
-function getPreviousTag(repoPath, tag, callback) {
-    listTags(repoPath, (err, tagList) => {
-        if (err) {
-            return callback(err, null)
-        }
+function getPreviousTag(repoPath, tag, callback, tagPrefix=null) {
+    listTags(
+        repoPath,
+        (err, tagList) => {
+            if (err) {
+                return callback(err, null)
+            }
 
-        let i = tagList.indexOf(tag) - 1
+            let i = tagList.indexOf(tag) - 1
 
-        if (i > -1) {
-            return callback(null, tagList[i])
-        } else {
-            return callback("Could not find tag", null)
-        }
-    })
+            if (i > -1) {
+                return callback(null, tagList[i])
+            } else {
+                return callback("Could not find tag", null)
+            }
+        },
+        tagPrefix
+    )
 }
 
 
@@ -171,7 +177,8 @@ function main() {
         .option('-b, --base <oid>', 'Base tag')
         .option('-h, --head <oid>', 'Head tag')
         .option('-t, --title [title]', 'Title to use for the output html page', null)
-        .option('--tag-prefix [prefix]', 'Tag prefix to filter on', null)
+        .option('--tagprefix [prefix]', 'Tag prefix to filter on. Only used when finding the '
+                                        + 'previous tag, when base tag is not specified', null)
         .option('-c, --component <path>',
             'Optional component to diff. Must be a relative path to a directory within the '
             + 'repository from its root. Other directories at the same level are filtered from the '
@@ -179,9 +186,12 @@ function main() {
 
     program.on('--help', () => {
         console.log('')
-        console.log("If a base tag is not specified, webdiff will list, sort the repository's tags; and use the previous tag to the given one.")
-        console.log("For example, given a repo with tags of ['v3', 'v1', 'v2'], web diff would default to v2 for the base tag when given a head of v3.")
-        console.log("Sorting is simple alphanumeric, so be aware that v1.9 would be treated as newer than than v1.10 as 9 > 1.")
+        console.log("If a base tag is not specified, webdiff will list, sort the repository's "
+                    + "tags; and use the previous tag to the given one.")
+        console.log("For example, given a repo with tags of ['v3', 'v1', 'v2'], web diff would "
+                    + "default to v2 for the base tag when given a head of v3.")
+        console.log("Sorting is simple alphanumeric, so be aware that v1.9 would be treated as "
+                    + "newer than than v1.10 as 9 > 1.")
     })
 
     program.parse(process.argv);

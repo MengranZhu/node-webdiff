@@ -7,14 +7,18 @@ Generates HTML diffs from git repositories. Essentially, this project glues toge
 
 Why?
 ----
-We use a monorepo at Starling, which makes generating concise release reports from Github challenging.
+We use monorepos at Starling, which makes generating concise release reports from Github challenging.
+
+Who
+---
+If you need to generate a human-readable diff from two tags while filtering out certain paths, this project may help you.
 
 How
 ---
 
 ### Install
 ```sh
-npm -g i webdiff
+npm -g i .
 ```
 
 ### Usage
@@ -33,10 +37,31 @@ $ webdiff --help
     -h, --help         output usage information
 ```
 
-Who
----
-If you need to generate a human-readable diff from two tags while filtering out certain paths, this project may help you.
+Example:
+```sh
+$ webdiff -p ~/src/foos \
+    -h RELEASE-2.0 \
+    --tagprefix RELEASE- \
+    -c components/foo \
+    > test.html
+```
 
+
+### Docker Image Build
+```sh
+$ make docker
+```
+
+### Docker Image Usage
+Path defaults to /data, so mount the repository to /data and you are good to go:
+```sh
+$ docker run -v $(pwd):/data \
+    webdiff:latest \
+      --tagprefix RELEASE- \
+      --component components/banking \
+      --head RELEASE-2.0 \
+    > webdiff.html
+```
 
 Credits
 -------

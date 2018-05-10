@@ -1,23 +1,31 @@
 ## Base stage
-# public library node:9 image with security patches
-FROM library/node:9-stretch as base
-# remove unneeded packages
-RUN DEBIAN_FRONTEND=noninteractive \
-    apt-get -y remove \
-        mercurial \
-        cups \
-     && \
-    apt-get -y autoremove
-RUN DEBIAN_FRONTEND=noninteractive \
-    apt-get -y update && \
-    apt-get -y upgrade && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists
+# nodegit sucks a little on alpine:
+#   https://github.com/nodegit/nodegit/issues/1361
+FROM library/node:9-alpine as base
+# packages needed for nodegit at runtime
+RUN apk --no-cache update && \
+    apk --no-cache add \
+        libcurl
 
+RUN ln -s /usr/lib/libcurl.so.4 /usr/lib/libcurl-gnutls.so.4
 
 ## Build stage
 FROM base as builder
 WORKDIR /src
+
+# packages needed for nodegit at compile/install time
+RUN apk update && \
+    apk add \
+        build-base \
+        curl-dev \
+        g++ \
+        gcc \
+        libc-dev \
+        libgit2-dev \
+        libressl-dev \
+        make \
+        python
+
 ADD package.json /src/package.json
 RUN npm install
 

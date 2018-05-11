@@ -178,8 +178,8 @@ function title(name, base, head) {
 function main() {
     program.version('1.0.0')
         .option('-p, --path [path]', 'Path to repository', '.')
-        .option('-b, --base <oid>', 'Base tag')
-        .option('-h, --head <oid>', 'Head tag')
+        .option('-b, --base <oid>', 'Base commit / tag')
+        .option('-h, --head <oid>', 'Head commit / tag')
         .option('-t, --title [title]', 'Title to use for the output html page', null)
         .option('--tagprefix [prefix]', 'Tag prefix to filter on. Only used when finding the '
                                         + 'previous tag, when base tag is not specified', null)

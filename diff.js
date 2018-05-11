@@ -4,21 +4,44 @@ const path = require('path');
 const async = require('async');
 
 
-function getGitTreeFromTag(repo, tagName, callback) {
-    git.Reference.lookup(repo, `refs/tags/${tagName}`)
-        .then(reference => {
-            // 2 is GIT_OBJ_TREE
-            reference.peel(2)
-                .then(tree => {
-                    callback(null, tree)
-                })
-                .catch(reason => {
-                    callback(`tree lookup failed: ${reason}`, null)
-                })
-        })
-        .catch(reason => {
-            callback(reason, null)
-        });
+function getGitTreeFromTreeish(repo, treeish, callback) {
+    /* Get the tree from a tag or commit */
+
+    let oid = git.Oid.fromString(treeish).tostrS()
+    // Feels like there should be a better way to do this
+    if (oid === '0000000000000000000000000000000000000000') {
+        // is not an OID, assume tag
+        git.Reference.lookup(repo, `refs/tags/${treeish}`)
+            .then(reference => {
+                // 2 is GIT_OBJ_TREE
+                reference.peel(2)
+                    .then(tree => {
+                        callback(null, tree)
+                    })
+                    .catch(reason => {
+                        callback(`tree lookup failed: ${reason}`, null)
+                    })
+            })
+            .catch(reason => {
+                callback(reason, null)
+            });
+    } else {
+        // is an OID, lookup directly
+        git.Object.lookup(repo, treeish, -2)
+            .then(object => {
+                // 2 is GIT_OBJ_TREE
+                object.peel(2)
+                    .then(tree => {
+                        callback(null, tree)
+                    })
+                    .catch(reason => {
+                        callback(`tree lookup failed: ${reason}`, null)
+                    })
+            })
+            .catch(reason => {
+                callback(reason, null)
+            });
+    }
 }
 
 
@@ -60,13 +83,13 @@ module.exports = function(repoPath, baseCommit, headCommit, pathspec, callback) 
                 });
         },
         base: ['repo', function (results, callback) {
-            getGitTreeFromTag(results.repo, baseCommit, callback)
+            getGitTreeFromTreeish(results.repo, baseCommit, callback)
                 .catch(reason => {
                     callback(reason, null)
                 })
         }],
         head: ['repo', function (results, callback) {
-            getGitTreeFromTag(results.repo, headCommit, callback)
+            getGitTreeFromTreeish(results.repo, headCommit, callback)
                 .catch(reason => {
                     callback(reason, null)
                 })

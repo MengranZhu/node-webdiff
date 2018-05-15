@@ -203,17 +203,12 @@ function findMissing(base, head, callback) {
     }
 
     if (typeof head === 'undefined') {
-        // find the head; base must be a commit
-         if (git.isOid(base)) {
-             git.getHeadCommit(program.path, (err, headCommit) => {
-                 if (err) {
-                     return callback(err, null)
-                 }
-                 return callback(null, base, headCommit)
-             })
-         } else {
-             return callback('head must be specified when base is a tag', null, null);
-         }
+         git.getHeadCommit(program.path, (err, headCommit) => {
+             if (err) {
+                 return callback(err, null)
+             }
+             return callback(null, base, headCommit)
+         })
     }
 
     if (typeof base === 'undefined') {

@@ -4,11 +4,11 @@
 const async = require('async');
 const diff2html = require("diff2html").Diff2Html;
 const program = require('commander');
-const diff = require('./diff');
+const git = require('./git');
 const path = require('path');
 const fs = require('fs');
 const util = require('util');
-const git = require('nodegit');
+const NodeGit = require('nodegit');
 
 // Always ignore these paths in any repository
 // Git pathspecs are valid here
@@ -77,10 +77,10 @@ function listPathsForDiff(repoPath, componentPath) {
 
     let ignorePathspecs = []
     gitignore.forEach(entry => {
-        ignorePathspecs.push(git.Pathspec.create(entry))
+        ignorePathspecs.push(NodeGit.Pathspec.create(entry))
     })
     excludePaths.forEach(entry => {
-        ignorePathspecs.push(git.Pathspec.create(entry))
+        ignorePathspecs.push(NodeGit.Pathspec.create(entry))
     })
 
     for (let i = 0; i < files.length; i++) {
@@ -107,10 +107,14 @@ function listPathsForDiff(repoPath, componentPath) {
 
 
 function generateDiffForPaths(repoPath, baseCommit, headCommit, pathArray, callback) {
+    /*
+        Because libgit's pathspec support is limited (does not support exclusions), we chain
+        together diffs from a list of paths, rather than generate a single diff from a pathspec.
+     */
     async.concat(
         pathArray,
         (p, _callback) => {
-            diff(repoPath, baseCommit, headCommit, p, (err, _diff) => {
+            git.diff(repoPath, baseCommit, headCommit, p, (err, _diff) => {
                 if (err) {
                     return _callback(err, null)
                 }
@@ -124,46 +128,6 @@ function generateDiffForPaths(repoPath, baseCommit, headCommit, pathArray, callb
             concatDiff = concatDiff.filter(s => {return s !== '' })
             return callback(null, concatDiff.join(''))
         }
-    )
-}
-
-
-function listTags(repoPath, callback, prefix=null) {
-    git.Repository.open(path.resolve(repoPath, '.git')).then(
-        repo => {
-            return git.Tag.list(repo)
-        })
-        .then(tagList => {
-            if (prefix) {
-                tagList = tagList.filter(t => {
-                    return t.startsWith(prefix)
-                })
-            }
-            return callback(null, tagList.sort())
-        })
-        .catch(reason => {
-            return callback(reason, null)
-        });
-}
-
-
-function getPreviousTag(repoPath, tag, callback, tagPrefix=null) {
-    listTags(
-        repoPath,
-        (err, tagList) => {
-            if (err) {
-                return callback(err, null)
-            }
-
-            let i = tagList.indexOf(tag) - 1
-
-            if (i > -1) {
-                return callback(null, tagList[i])
-            } else {
-                return callback("Could not find tag", null)
-            }
-        },
-        tagPrefix
     )
 }
 
@@ -188,20 +152,23 @@ function main() {
             + 'repository from its root. Other directories at the same level are filtered from the '
             + 'diff. Whole repository is diff\'d if not specified.', null)
 
-    program.on('--help', () => {
-        console.log('')
-        console.log("If a base tag is not specified, webdiff will list, sort the repository's "
-                    + "tags; and use the previous tag to the given one.")
+    program.on("--help", () => {
+        console.log("")
+        console.log("If --base is not specified and --head is a tag, webdiff will list & sort the "
+                    + "repository's tags, and use the previous tag to the given one as the base.")
         console.log("For example, given a repo with tags of ['v3', 'v1', 'v2'], web diff would "
                     + "default to v2 for the base tag when given a head of v3.")
         console.log("Sorting is simple alphanumeric, so be aware that v1.9 would be treated as "
                     + "newer than than v1.10 as 9 > 1.")
+        console.log("")
+        console.log("If --head is not specified and --base is a commit, webdiff will use the "
+                    + "head of the current branch as the head commit")
     })
 
     program.parse(process.argv);
 
-    if (typeof program.head === 'undefined') {
-        console.log('head tag must be specified');
+    if (typeof program.head === 'undefined' && program.base === 'undefined') {
+        console.log("--base or --head must be specified (--base for commits, --head with --prefix for tags; or both)")
         process.exit(1);
     }
 
@@ -216,30 +183,52 @@ function main() {
         diffPaths = ["*"]
     }
 
-    /*
-        Because libgit's pathspec support is limited (does not support exclusions), we chain
-        together diffs from a list of paths, rather than generate a single diff from a pathspec.
-     */
-    if (program.base) {
-        generateDiffForPaths(program.path, program.base, program.head, diffPaths, (err, diffString) => {
+    findMissing(program.base, program.head, (err, base, head) => {
+        if (err) {
+            console.log(err)
+            process.exit(1)
+        }
+        generateDiffForPaths(program.path, base, head, diffPaths, (err, diffString) => {
             console.log(generateHtmlFromDiff(
-                diffString, program.title || title(name, program.base, program.head))
+                diffString, program.title || title(name, base, head))
             )
         })
-    } else {
-        getPreviousTag(
-            program.path, program.head, (err, baseTag) => {
+    })
+}
+
+
+function findMissing(base, head, callback) {
+    if (typeof head !== 'undefined' && typeof base !== 'undefined') {
+        return callback(null, base, head)
+    }
+
+    if (typeof head === 'undefined') {
+        // find the head; base must be a commit
+         if (git.isOid(base)) {
+             git.getHeadCommit(program.path, (err, headCommit) => {
+                 if (err) {
+                     return callback(err, null)
+                 }
+                 return callback(null, base, headCommit)
+             })
+         } else {
+             return callback('head must be specified when base is a tag', null, null);
+         }
+    }
+
+    if (typeof base === 'undefined') {
+        // find the base; head must be a tag
+        if (! git.isOid(head)) {
+            git.getPreviousTag(program.path, head, (err, baseTag) => {
                 if (err) {
-                    console.log(err)
+                    return callback(err, null)
                 }
-                generateDiffForPaths(program.path, baseTag, program.head, diffPaths, (err, diffString) => {
-                    console.log(generateHtmlFromDiff(
-                        diffString, program.title || title(name, baseTag, program.head))
-                    )
-                })
-            },
-            program.tagprefix
-        )
+                return callback(null, baseTag, head)
+            })
+        } else {
+            return callback('base must be specified when head is a commit', null, null);
+        }
+
     }
 
 }

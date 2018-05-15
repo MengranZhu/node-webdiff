@@ -212,16 +212,22 @@ function findMissing(base, head, callback) {
     }
 
     if (typeof base === 'undefined') {
-        // find the base; head must be a tag
-        if (! git.isOid(head)) {
+        // find the base tag
+        if ((! git.isOid(head)) || (program.prefix !== "undefined")) {
+            /*
+                In the case of head being a tag, we'll get the previous one
+                In the case of head being a commit we can just get the last tag, but that requires
+                a prefix
+            */
             git.getPreviousTag(program.path, head, (err, baseTag) => {
                 if (err) {
                     return callback(err, null)
                 }
                 return callback(null, baseTag, head)
-            })
+            },
+            program.tagprefix)
         } else {
-            return callback('base must be specified when head is a commit', null, null);
+            return callback('base or tagprefix must be specified when head is a commit', null, null);
         }
 
     }

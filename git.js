@@ -7,7 +7,12 @@ const async = require('async');
 function isOid(string) {
     // must be a better way to do this....
     let oid = NodeGit.Oid.fromString(string).tostrS()
-    return oid !== '0000000000000000000000000000000000000000';
+
+    // Not sure the null OID sans "b" is correct, see commit notes
+    return (
+        oid !== 'b000000000000000000000000000000000000000' &&
+        oid !== '0000000000000000000000000000000000000000'
+    )
 }
 
 

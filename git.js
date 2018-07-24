@@ -8,7 +8,6 @@ function isOid(string) {
     // must be a better way to do this....
     let oid = NodeGit.Oid.fromString(string).tostrS()
 
-    // Not sure the null OID sans "b" is correct, see commit notes
     return (
         ! oid.includes('00000000000000000000000000000000000000')
     )

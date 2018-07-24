@@ -106,7 +106,7 @@ function listTags(repoPath, callback, prefix=null) {
 function getHeadCommit(repoPath, callback) {
     NodeGit.Repository.open(path.resolve(repoPath, '.git')).then(repo => {
         repo.getHeadCommit().then(headCommit => {
-            console.log("head commit", headCommit.toString())
+            // console.log("head commit", headCommit.toString())
             return callback(null, headCommit.toString())
         })
     })
@@ -172,7 +172,7 @@ function diff(repoPath, baseCommit, headCommit, pathspec, callback) {
         }]
     }, function(err, results) {
         if (err) {
-            console.log('error: ', err)
+            console.error('error: ', err)
             process.exit(1)
         }
 

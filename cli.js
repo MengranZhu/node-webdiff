@@ -24,12 +24,12 @@ try {
     main();
 
 } catch (e) {
-    console.log(e)
+    console.error(e)
     process.exit(1)
 }
 
 process.on('uncaughtException', function (error) {
-    console.log(error.stack);
+    console.error(error.stack);
 });
 
 
@@ -168,7 +168,7 @@ function main() {
     program.parse(process.argv);
 
     if (typeof program.head === 'undefined' && program.base === 'undefined') {
-        console.log("--base or --head must be specified (--base for commits, --head with --prefix for tags; or both)")
+        console.error("--base or --head must be specified (--base for commits, --head with --prefix for tags; or both)")
         process.exit(1);
     }
 
@@ -185,7 +185,7 @@ function main() {
 
     findMissing(program.base, program.head, (err, base, head) => {
         if (err) {
-            console.log(err)
+            console.error(err)
             process.exit(1)
         }
         generateDiffForPaths(program.path, base, head, diffPaths, (err, diffString) => {

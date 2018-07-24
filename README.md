@@ -37,19 +37,46 @@ $ webdiff --help
     -h, --help         output usage information
 ```
 
-Example:
+### Example
+Conder a repo "application" with the following layout:
+
+```
+-application
+ |-components
+ | |-foo
+ | |-bar
+ | |-baz
+ |-config
+ |-shared
+```
+
+We are releasing component `foo`. Our last release is tagged `RELEASE-1.0`, our new release is tagged `RELEASE-2.0`.
+Thus we want a diff between `tags/RELEASE-1.0` and `tags/RELEASE-2.0` which excludes `components/bar` and `components/baz`; while including "config" and "shared".
+
+To generate this we would run:
 ```sh
-$ webdiff -p ~/src/foos \
-    -h RELEASE-2.0 \
-    --tagprefix RELEASE- \
-    -c components/foo \
+$ webdiff -p ~/src/application \
+    --base RELEASE-1.0 \
+    --head RELEASE-2.0 \
+    --component components/foo \
     > test.html
 ```
+
+If we don't actually know what the last release was, we can supply the prefix and webdiff will figure it out by sorting alphanumerically:
+```sh
+$ webdiff -p ~/src/application \
+    --head RELEASE-2.0 \
+    --tagprefix RELEASE- \
+    --component components/foo \
+    > test.html
+```
+
+--head and --base can also be commit shas.
 
 
 ### Docker Image Build
 ```sh
-$ make docker
+$ docker build -t webdiff:latest .
 ```
 
 ### Docker Image Usage

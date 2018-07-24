@@ -10,8 +10,7 @@ function isOid(string) {
 
     // Not sure the null OID sans "b" is correct, see commit notes
     return (
-        oid !== 'b000000000000000000000000000000000000000' &&
-        oid !== '0000000000000000000000000000000000000000'
+        ! oid.includes('00000000000000000000000000000000000000')
     )
 }
 

@@ -10,10 +10,11 @@
   "author": "Alex Forbes",
   "license": "ISC",
   "dependencies": {
-    "async": "^2.6.0",
-    "commander": "^2.15.1",
-    "diff2html": "^2.3.3",
-    "nodegit": "^0.22.0"
+    "async": "^2.6.1",
+    "commander": "^2.18.0",
+    "diff2html": "^2.4.0",
+    "nodegit": "^0.22.0",
+    "semver-sort": "0.0.4"
   },
   "bin": {
     "webdiff": "./cli.js"

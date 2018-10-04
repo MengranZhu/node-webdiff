@@ -2,6 +2,7 @@
 const NodeGit = require('nodegit');
 const path = require('path');
 const async = require('async');
+const semverSort = require('semver-sort');
 
 
 function isOid(string) {
@@ -93,7 +94,7 @@ function listTags(repoPath, callback, prefix=null) {
                     return t.startsWith(prefix)
                 })
             }
-            return callback(null, tagList.sort())
+            return callback(null, semverSort.asc(tagList))
         })
         .catch(reason => {
             return callback(reason, null)

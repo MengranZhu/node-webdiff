@@ -158,8 +158,7 @@ function main() {
                     + "repository's tags, and use the previous tag to the given one as the base.")
         console.log("For example, given a repo with tags of ['v3', 'v1', 'v2'], web diff would "
                     + "default to v2 for the base tag when given a head of v3.")
-        console.log("Sorting is simple alphanumeric, so be aware that v1.9 would be treated as "
-                    + "newer than than v1.10 as 9 > 1.")
+        console.log("Sorting is based on semantic versioning.")
         console.log("")
         console.log("If --head is not specified and --base is a commit, webdiff will use the "
                     + "head of the current branch as the head commit")

@@ -14,7 +14,8 @@
     "commander": "^2.18.0",
     "diff2html": "^2.4.0",
     "nodegit": "^0.22.0",
-    "semver-sort": "0.0.4"
+    "semver": "^5.5.1",
+    "semver-regex": "^2.0.0"
   },
   "bin": {
     "webdiff": "./cli.js"

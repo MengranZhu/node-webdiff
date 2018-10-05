@@ -2,7 +2,8 @@
 const NodeGit = require('nodegit');
 const path = require('path');
 const async = require('async');
-const semverSort = require('semver-sort');
+const semver = require('semver');
+const semverRegex = require('semver-regex');
 
 
 function isOid(string) {
@@ -83,18 +84,64 @@ function gitDiffToString(diff, callback) {
 }
 
 
-function listTags(repoPath, callback, prefix=null) {
+function sortSemver(semvers) {
+    // filter out bad semvers
+    semvers = semvers.filter(v => {
+        if (semver.coerce(v) == null) {
+            console.warn(`${v} could not be coerced to a valid semver, it will be ignored`)
+            return false
+        } else {
+            return  true
+        }
+    })
+    return semvers.sort(function (v1, v2) {
+        var sv1 = semverRegex().exec(semver.coerce(v1))[0] || v1;
+        var sv2 = semverRegex().exec(semver.coerce(v2))[0] || v2;
+
+        return semver.compare(sv1, sv2);
+    });
+}
+
+function listTags(repoPath, sortMethod, callback, prefix=null) {
     NodeGit.Repository.open(path.resolve(repoPath, '.git')).then(
         repo => {
             return NodeGit.Tag.list(repo)
         })
         .then(tagList => {
+            var versions = [];
             if (prefix) {
                 tagList = tagList.filter(t => {
                     return t.startsWith(prefix)
                 })
+                // strip the prefix for sorting
+                var re = new RegExp(`^${prefix}`)
+                for (var i = 0, len = tagList.length; i < len; i++) {
+                    versions.push(tagList[i].replace(re, ""))
+                }
+            } else {
+                versions = tagList
             }
-            return callback(null, semverSort.asc(tagList))
+            return versions
+        })
+        .then(versions => {
+            if (sortMethod == 'semver') {
+                return sortSemver(versions)
+            } else if (sortMethod == 'alpha') {
+                return versions.sort()
+            } else if (sortMethod == 'none') {
+                return versions
+            } else {
+                throw `invalid sort method ${sortMethod}`
+            }
+        })
+        .then(sortedVersions => {
+            if (prefix) {
+                // reinstate the prefix
+                for (var i = 0, len = sortedVersions.length; i < len; i++) {
+                    sortedVersions[i] = `${prefix}${sortedVersions[i]}`
+                }
+            }
+            return callback(null, sortedVersions)
         })
         .catch(reason => {
             return callback(reason, null)
@@ -112,20 +159,19 @@ function getHeadCommit(repoPath, callback) {
 }
 
 
-function getPreviousTag(repoPath, tag, callback, tagPrefix=null) {
+function getPreviousTag(repoPath, tag, sortMethod, callback, tagPrefix=null) {
     listTags(
         repoPath,
+        sortMethod,
         (err, tagList) => {
             if (err) {
                 return callback(err, null)
             }
-
             if (tagList.length === 0) {
-                return callback(`No tags with prefix ${tagPrefix}`, null)
+                return callback(`No valid tags with prefix ${tagPrefix}`, null)
             }
 
             let i = tagList.indexOf(tag) - 1
-
             if (i > 0) {
                 // We've found the tag, and there is a prior one; return it
                 return callback(null, tagList[i])

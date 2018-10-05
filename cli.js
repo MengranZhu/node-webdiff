@@ -151,14 +151,19 @@ function main() {
             'Optional component to diff. Must be a relative path to a directory within the '
             + 'repository from its root. Other directories at the same level are filtered from the '
             + 'diff. Whole repository is diff\'d if not specified.', null)
+        .option('--sort <method>',
+                'Sorting method to use. Valid options are "alpha" for alphanumeric sort, "semver" '
+                + 'for semantic versioning, or "none" to leave the order as returned by NodeGit '
+                + '(which may do its own sorting).',
+                /^(alpha|semver|none)$/i, 'alpha')
 
     program.on("--help", () => {
         console.log("")
         console.log("If --base is not specified and --head is a tag, webdiff will list & sort the "
-                    + "repository's tags, and use the previous tag to the given one as the base.")
+                    + "repository's tags according to the method specified by --sort, and use the "
+                    + "previous tag to the given one as the base. ")
         console.log("For example, given a repo with tags of ['v3', 'v1', 'v2'], web diff would "
                     + "default to v2 for the base tag when given a head of v3.")
-        console.log("Sorting is based on semantic versioning.")
         console.log("")
         console.log("If --head is not specified and --base is a commit, webdiff will use the "
                     + "head of the current branch as the head commit")
@@ -166,7 +171,7 @@ function main() {
 
     program.parse(process.argv);
 
-    if (typeof program.head === 'undefined' && program.base === 'undefined') {
+    if (typeof program.head === 'undefined' && typeof program.base === 'undefined') {
         console.error("--base or --head must be specified (--base for commits, --head with --prefix for tags; or both)")
         process.exit(1);
     }
@@ -218,7 +223,7 @@ function findMissing(base, head, callback) {
                 In the case of head being a commit we can just get the last tag, but that requires
                 a prefix
             */
-            git.getPreviousTag(program.path, head, (err, baseTag) => {
+            git.getPreviousTag(program.path, head, program.sort, (err, baseTag) => {
                 if (err) {
                     return callback(err, null)
                 }

@@ -22,57 +22,64 @@ npm -g i .
 ```
 
 ### Usage
-```sh
+```
 $ webdiff --help
+Usage: webdiff [options]
 
-  Usage: webdiff [options]
+Options:
 
-  Options:
+  -V, --version           output the version number
+  -p, --path [path]       Path to repository (default: .)
+  -b, --base <oid>        Base commit / tag
+  -h, --head <oid>        Head commit / tag
+  -t, --title [title]     Title to use for the output html page (default: null)
+  --tagprefix [prefix]    Tag prefix to filter on. Only used when finding the previous tag, when base tag is not specified (default: null)
+  -c, --component <path>  Optional component to diff. Must be a relative path to a directory within the repository from its root. Other directories at the same level are filtered from the diff. Whole repository is diff'd if not specified. (default: null)
+  --sort <method>         Sorting method to use. Valid options are "alpha" for alphanumeric sort, "semver" for semantic versioning, or "none" to leave the order as returned by NodeGit (which may do its own sorting). (default: alpha)
+  -h, --help              output usage information
 
-    -V, --version      output the version number
-    -p, --path [path]  Path to repository (default: .)
-    -b, --base <oid>   Base tag
-    -h, --head <oid>   Head tag
-    -c, --component    Component of release. Must be a path to a directory. Other directories at the same level are filtered from the diff.
-    -h, --help         output usage information
+If --base is not specified and --head is a tag, webdiff will list & sort the repository's tags according to the method specified by --sort, and use the previous tag to the given one as the base.
+For example, given a repo with tags of ['v3', 'v1', 'v2'], web diff would default to v2 for the base tag when given a head of v3.
+
+If --head is not specified and --base is a commit, webdiff will use the head of the current branch as the head commit
 ```
 
 ### Example
-Conder a repo "application" with the following layout:
+Conder a repo "application" (which is the git root), with the following layout:
 
 ```
--application
- |-components
- | |-foo
- | |-bar
- | |-baz
- |-config
- |-shared
+application
+├── .git
+├── components
+│   ├── foo
+│   ├── bar
+│   └── baz
+├── config
+└── shared
 ```
 
-We are releasing component `foo`. Our last release is tagged `RELEASE-1.0`, our new release is tagged `RELEASE-2.0`.
-Thus we want a diff between `tags/RELEASE-1.0` and `tags/RELEASE-2.0` which excludes `components/bar` and `components/baz`; while including "config" and "shared".
+We are releasing component `foo`. Our last release is tagged `foo_1.0`, our new release is tagged `foo_2.0`.
+Thus we want a diff between `tags/foo_1.0` and `tags/foo_2.0` which excludes `components/bar` and `components/baz`; while including "config" and "shared".
 
 To generate this we would run:
 ```sh
 $ webdiff -p ~/src/application \
-    --base RELEASE-1.0 \
-    --head RELEASE-2.0 \
+    --base foo_1.0 \
+    --head foo_2.0 \
     --component components/foo \
     > test.html
 ```
 
-If we don't actually know what the last release was, we can supply the prefix and webdiff will figure it out by sorting alphanumerically:
+If we don't actually know what the last release was, we can supply the prefix and webdiff will figure it out by sorting the tags (configurable with `--sort`):
 ```sh
 $ webdiff -p ~/src/application \
-    --head RELEASE-2.0 \
-    --tagprefix RELEASE- \
+    --head foo_2.0 \
+    --tagprefix foo- \
     --component components/foo \
     > test.html
 ```
 
 --head and --base can also be commit shas.
-
 
 ### Docker Image Build
 ```sh
@@ -84,9 +91,9 @@ Path defaults to /data, so mount the repository to /data and you are good to go:
 ```sh
 $ docker run -v $(pwd):/data \
     webdiff:latest \
-      --tagprefix RELEASE- \
+      --tagprefix foo- \
       --component components/foo \
-      --head RELEASE-2.0 \
+      --head foo_2.0 \
     > webdiff.html
 ```
 

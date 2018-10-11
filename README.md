@@ -85,10 +85,17 @@ Path defaults to /data, so mount the repository to /data and you are good to go:
 $ docker run -v $(pwd):/data \
     webdiff:latest \
       --tagprefix RELEASE- \
-      --component components/banking \
+      --component components/foo \
       --head RELEASE-2.0 \
     > webdiff.html
 ```
+
+Troubleshooting
+---------------
+```
+error:  tree lookup failed: Error: the reference 'refs/tags/mytag' cannot be peeled - Cannot retrieve reference target
+```
+Ensure you have a full checkout and are not using git alternates. Teamcity, for example, has an option called "use mirrors", which uses git alternates to create a shared checkout on the agent. Unfortunately, libgit doesn't work against such checkouts.
 
 Credits
 -------
